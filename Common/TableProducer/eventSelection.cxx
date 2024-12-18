@@ -1104,7 +1104,7 @@ struct EventSelectionTask {
 
         // standard cut on other collisions vs delta-times
         const float driftV = 2.5; // drift velocity in cm/us, TPC drift_length / drift_time = 250 cm / 100 us
-        if (std::fabs(dt) < 2.0) {     // us, complete veto on other collisions
+        if (std::fabs(dt) < 2.0) { // us, complete veto on other collisions
           nCollsWithFT0CAboveVetoStandard++;
         } else if (dt > -4.0 && dt <= -2.0) { // us, strict veto to suppress fake ITS-TPC matches more
           if (vAmpFT0CperColl[thisColIndex] > confFT0CamplCutVetoOnCollInTimeRange / 5)
