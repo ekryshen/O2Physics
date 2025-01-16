@@ -75,16 +75,22 @@ Acts::TrackingGeometry* CreateTrackingGeometry(){
     Acts::LayerVector layVec;
     double phi0 = pi * (sec / 6. - 1);
     printf("phi0 = %f\n",phi0);
-    for (int i = 0; i < nLayers; i++) {
+    for (int i = nLayers-1; i >=0; i--) {
       double y = 407. + ( i < 27 ? (i+0.5)*12. : (27*12. + (i - 27 +0.5)*18.));
       double x = padCount[i]*5.;
       double z = 1640.;
       // printf("%d %d %f\n", i, padCount[i], y);
-      const auto pBounds = std::make_shared<const Acts::RectangleBounds>(z, x); // half-x, half-y
+      // const auto pBounds = std::make_shared<const Acts::RectangleBounds>(z, x); // half-x, half-y
+      // Acts::Transform3 trafo = Acts::Transform3::Identity();
+      // trafo.rotate(Eigen::AngleAxisd(pi/2., Acts::Vector3(0, 1, 0)));
+      // trafo.rotate(Eigen::AngleAxisd(-phi0, Acts::Vector3(1, 0, 0)));
+      // trafo.translate(Acts::Vector3(0., 0., y));
 
+      const auto pBounds = std::make_shared<const Acts::RectangleBounds>(x, z); // half-x, half-y
       Acts::Transform3 trafo = Acts::Transform3::Identity();
+      trafo.rotate(Eigen::AngleAxisd(pi/2., Acts::Vector3(1, 0, 0)));
       trafo.rotate(Eigen::AngleAxisd(pi/2., Acts::Vector3(0, 1, 0)));
-      trafo.rotate(Eigen::AngleAxisd(-phi0, Acts::Vector3(1, 0, 0)));
+      trafo.rotate(Eigen::AngleAxisd( phi0, Acts::Vector3(0, 1, 0)));
       trafo.translate(Acts::Vector3(0., 0., y));
 
       auto surface = Acts::Surface::makeShared<Acts::PlaneSurface>(trafo, pBounds);
@@ -137,6 +143,39 @@ Acts::TrackingGeometry* CreateTrackingGeometry(){
   auto motherVolume = std::make_shared<Acts::TrackingVolume>(Acts::Transform3::Identity(), motherBounds, volumeMaterial, nullptr, std::move(volumeArray), Acts::MutableTrackingVolumeVector{}, "DET");
 
   auto trackingGeometry = new Acts::TrackingGeometry(motherVolume);
+
+  // Check geometry
+  bool print_geometry_info = 1;
+  if (print_geometry_info) {
+    const Acts::TrackingVolume *highestTrackingVolume = trackingGeometry->highestTrackingVolume();
+    printf("volumeId = %lu\n", highestTrackingVolume->geometryId().value());
+    auto confinedVolumes = highestTrackingVolume->confinedVolumes();
+    printf("confined volumes: %lu\n",confinedVolumes->arrayObjects().size());
+    const Acts::LayerArray *confinedLayers = confinedVolumes->arrayObjects().at(12)->confinedLayers();
+    for (const auto &layer : confinedLayers->arrayObjects())  {
+      std::stringstream lid;
+      lid << layer->geometryId();
+
+      printf("  layerId = %s, thickness = %f type = %d\n", lid.str().data(), layer->thickness(), layer->layerType());
+      if (layer->layerType()==-1) {
+        const Acts::NavigationLayer* nlayer = dynamic_cast<const Acts::NavigationLayer*>(layer.get());
+        // printf("   navigation layer%p\n", nlayer);
+      } else {
+        const Acts::PlaneLayer* player = dynamic_cast<const Acts::PlaneLayer*>(layer.get());
+        // printf("   plane %p\n", player);
+
+      }
+      if (!layer->surfaceArray())
+        continue;
+      for (const auto &surface : layer->surfaceArray()->surfaces()) {
+        std::stringstream sid;
+        sid << surface->geometryId();
+        printf("       surfaceId = %s\n", sid.str().data());
+      }
+    } //for layers
+  } // print_geometry_info
+
+
   return trackingGeometry;
 }
 
